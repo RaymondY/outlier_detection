@@ -1,3 +1,16 @@
+# MacOS
+.DS_Store
+
+.idea/
+data/*
+!.gitkeep
+code/plane_cluster/model_weight/gmvae/*
+!.gitkeep
+code/history_cluster/model_weight/vae/*
+!.gitkeep
+code/plane_cluster/logs
+code/history_cluster/logs
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
