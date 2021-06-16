@@ -1,0 +1,118 @@
+import os
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from sklearn import metrics
+from kneed import KneeLocator
+from matplotlib import pyplot as plt, ticker
+from sklearn.metrics import precision_recall_curve
+
+from util import load_plane_data
+from distance import distance_score
+from config import DefaultConfig
+from cvae import CVAE
+
+
+config = DefaultConfig()
+
+
+def plot_ex(data, gen):
+    f, ax = plt.subplots(1, 1, figsize=(15, 6))
+    ax.plot(data)
+    ax.plot(gen)
+    ax.set_ylim([0, 1])
+    ax.set_xlim([-2, 290])
+    ax.xaxis.set_major_locator(ticker.FixedLocator([i * 24 for i in range(13)]))
+    ax.xaxis.set_major_formatter(ticker.FixedFormatter(["%02d:00" % (i * 2) for i in range(13)]))
+
+    plt.show()
+
+
+def get_ground_truth(day, start_machine, machine_num):
+    file_name = "/Day" + str(day) + "_" + str(start_machine) + "-" + str(start_machine + machine_num) + ".txt"
+    path = os.getcwd() + file_name
+    # read the label only
+    ground_truth = np.loadtxt(path, delimiter=',', skiprows=1, usecols=(2,)).astype(np.float32)
+    return ground_truth
+
+
+if __name__ == '__main__':
+
+    model = CVAE()
+    model.load_weights('model_weight/cvae/my_model_weight')
+
+    day = 35
+    start_machine = 0
+    machine_num = 200
+
+    ori_data_with_cluster = load_plane_data(day=day, start_machine=start_machine, machine_num=machine_num, is_train=False)
+    ori_data = tf.split(ori_data_with_cluster, [config.input_size, config.cluster_num], axis=-1)[0]
+    rec_data, x_std, c, logpx_z, prob_seq, rec_x_sample = model.reconstruct_x(ori_data_with_cluster)
+    score = np.zeros(shape=machine_num * config.kpi_num)
+    for i in range(len(ori_data)):
+        ori = ori_data[i].numpy()
+        rec = rec_data[i].numpy()
+        score[i] = distance_score(ori=ori, rec=rec)
+    label = get_ground_truth(day=day, start_machine=start_machine, machine_num=machine_num)
+    predict = np.ones_like(label).astype(np.int32)
+    predict[score > 12.6] = 0
+
+    # # 输出错误
+    # for machine_id in range(start_machine, start_machine + machine_num):
+    #     for kpi_id in range(config.kpi_num):
+    #         index = (machine_id - start_machine) * config.kpi_num + kpi_id
+    #         if predict[index] != label[index]:
+    #             print("score: {}".format(score[index]) + " == predict: {}".format(predict[index])
+    #                   + " == truth: {}".format(label[index]))
+    #             print("machine: {}".format(machine_id) + " == kpi: {}".format(kpi_id))
+    #             print("-----------------------")
+
+    # score_1 = list()
+    # score_2 = list()
+    # score_3 = list()
+    # c = c.numpy()
+    # for i in range(len(score)):
+    #     if (c[i] == [0, 1, 0]).all():
+    #         score_3.append(score[i])
+    #     elif (c[i] == [0, 0, 1]).all():
+    #         score_2.append(score[i])
+    #     elif (c[i] == [1, 0, 0]).all():
+    #         score_1.append(score[i])
+    # fig1, ax1 = plt.subplots(1, 1, figsize=(15, 6))
+    # ax1.hist(score_1, bins=100)
+    # plt.show()
+    # fig2, ax2 = plt.subplots(1, 1, figsize=(15, 6))
+    # ax2.hist(score_2, bins=100)
+    # plt.show()
+    # fig3, ax3 = plt.subplots(1, 1, figsize=(15, 6))
+    # ax3.hist(score_3, bins=100)
+    # plt.show()
+
+    print(metrics.precision_score(y_true=label, y_pred=predict, pos_label=0))
+    print(metrics.recall_score(y_true=label, y_pred=predict, pos_label=0))
+    print(metrics.f1_score(y_true=label, y_pred=predict, pos_label=0))
+    print('---------')
+
+    # save score result
+    result = score.reshape(machine_num, config.kpi_num).T
+    data_df = pd.DataFrame(result)
+    writer = pd.ExcelWriter('score.xlsx')
+    data_df.to_excel(writer, 'page_1', float_format='%.02f')
+    writer.save()
+
+    precision, recall, thresholds = precision_recall_curve(label, score, pos_label=0)
+    f1_record = 0
+    index = 0
+
+    for i in range(len(thresholds)):
+        if precision[i] == 0 or recall[i] == 0:
+            continue
+        f1 = 2 * precision[i] * recall[i] / (precision[i] + recall[i])
+        if f1 > f1_record:
+            f1_record = f1
+            index = i
+    print(thresholds[index])
+    print(precision[index])
+    print(recall[index])
+    print(f1_record)
+    print('---------')
