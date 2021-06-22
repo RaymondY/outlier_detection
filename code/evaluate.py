@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn import metrics
-from kneed import KneeLocator
 from matplotlib import pyplot as plt, ticker
 from sklearn.metrics import precision_recall_curve
 
@@ -47,7 +46,7 @@ if __name__ == '__main__':
 
     ori_data_with_cluster = load_plane_data(day=day, start_machine=start_machine, machine_num=machine_num, is_train=False)
     ori_data = tf.split(ori_data_with_cluster, [config.input_size, config.cluster_num], axis=-1)[0]
-    rec_data, x_std, c, logpx_z, prob_seq, rec_x_sample = model.reconstruct_x(ori_data_with_cluster)
+    rec_data, x_std, c, logpx_z = model.reconstruct_x(ori_data_with_cluster)
     score = np.zeros(shape=machine_num * config.kpi_num)
     for i in range(len(ori_data)):
         ori = ori_data[i].numpy()
@@ -55,38 +54,18 @@ if __name__ == '__main__':
         score[i] = distance_score(ori=ori, rec=rec)
     label = get_ground_truth(day=day, start_machine=start_machine, machine_num=machine_num)
     predict = np.ones_like(label).astype(np.int32)
-    predict[score > 12.6] = 0
+    # (0.2 - 0.04) * 18(1.5h) * 80% = 2.304
+    predict[score > 2.304] = 0
 
-    # # 输出错误
-    # for machine_id in range(start_machine, start_machine + machine_num):
-    #     for kpi_id in range(config.kpi_num):
-    #         index = (machine_id - start_machine) * config.kpi_num + kpi_id
-    #         if predict[index] != label[index]:
-    #             print("score: {}".format(score[index]) + " == predict: {}".format(predict[index])
-    #                   + " == truth: {}".format(label[index]))
-    #             print("machine: {}".format(machine_id) + " == kpi: {}".format(kpi_id))
-    #             print("-----------------------")
-
-    # score_1 = list()
-    # score_2 = list()
-    # score_3 = list()
-    # c = c.numpy()
-    # for i in range(len(score)):
-    #     if (c[i] == [0, 1, 0]).all():
-    #         score_3.append(score[i])
-    #     elif (c[i] == [0, 0, 1]).all():
-    #         score_2.append(score[i])
-    #     elif (c[i] == [1, 0, 0]).all():
-    #         score_1.append(score[i])
-    # fig1, ax1 = plt.subplots(1, 1, figsize=(15, 6))
-    # ax1.hist(score_1, bins=100)
-    # plt.show()
-    # fig2, ax2 = plt.subplots(1, 1, figsize=(15, 6))
-    # ax2.hist(score_2, bins=100)
-    # plt.show()
-    # fig3, ax3 = plt.subplots(1, 1, figsize=(15, 6))
-    # ax3.hist(score_3, bins=100)
-    # plt.show()
+    # 输出错误
+    for machine_id in range(start_machine, start_machine + machine_num):
+        for kpi_id in range(config.kpi_num):
+            index = (machine_id - start_machine) * config.kpi_num + kpi_id
+            if predict[index] != label[index]:
+                print("score: {}".format(score[index]) + " == predict: {}".format(predict[index])
+                      + " == truth: {}".format(label[index]))
+                print("machine: {}".format(machine_id) + " == kpi: {}".format(kpi_id))
+                print("-----------------------")
 
     print(metrics.precision_score(y_true=label, y_pred=predict, pos_label=0))
     print(metrics.recall_score(y_true=label, y_pred=predict, pos_label=0))

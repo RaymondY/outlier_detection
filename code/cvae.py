@@ -84,9 +84,7 @@ class CVAE(Model):
         x_mean, x_std = self.decode(z_mean, c)
         rec_x = tfp.distributions.Normal(x_mean, x_std)
         logpx_z = tf.reduce_sum(rec_x.log_prob(x), axis=1)
-        prob_seq = rec_x.prob(x)
-        rec_x_sample = rec_x.sample()
-        return x_mean, x_std, c, logpx_z, prob_seq, rec_x_sample
+        return x_mean, x_std, c, logpx_z
 
     def encode(self, data):
         x, c = tf.split(data, [config.input_size, config.cluster_num], axis=-1)

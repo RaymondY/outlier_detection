@@ -5,7 +5,6 @@ class DefaultConfig(object):
     # dir path
     data_path = '/../data/merged_data/'
     result_path = '/../result/'
-    # model_path = '/../result/cvae.model'
 
     kpi_num = 18
     day_num = 45
@@ -23,7 +22,7 @@ class DefaultConfig(object):
     batch_size = 18
 
     # lr_decay = 0.95  # when val_loss increase, lr = lr * lr_decay
-    # weight_decay = 1e-10  # 损失函数
+    # weight_decay = 1e-10
 
     current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
     log_dir = 'logs/gradient_tape/' + current_time

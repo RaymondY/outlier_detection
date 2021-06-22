@@ -4,12 +4,14 @@
 .idea/
 data/merged_data/*
 !.gitkeep
-code/plane_cluster/model_weight/gmvae/*
+result/*
 !.gitkeep
-code/history_cluster/model_weight/vae/*
+code/logs/gradient_tape/*
 !.gitkeep
-code/logs
 code/model_weight/cvae/*
+!.gitkeep
+
+code/score.xlsx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

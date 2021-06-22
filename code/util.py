@@ -5,7 +5,6 @@ import pandas as pd
 import tensorflow as tf
 from scipy import signal
 from sklearn.cluster import AgglomerativeClustering
-from scipy.stats import wasserstein_distance
 from config import DefaultConfig
 
 config = DefaultConfig()
@@ -24,10 +23,6 @@ def normal_pdf(sample, mean, std):
     return tf.math.exp(- (sample - mean) ** 2 / (2 * std ** 2))
 
 
-def wasserstein_distance_function(x, y):
-    return wasserstein_distance(x, y)
-
-
 def load_plane_data(day=35, start_machine=0, machine_num=100, is_train=False):
     plane_data = np.zeros(shape=(config.kpi_num * machine_num, config.input_size)).astype('float32')
     for machine_id in range(start_machine, start_machine + machine_num):
@@ -36,13 +31,6 @@ def load_plane_data(day=35, start_machine=0, machine_num=100, is_train=False):
                                             max_rows=config.input_size).astype(np.float32)
         plane_data[(machine_id - start_machine) * config.kpi_num:
                    (machine_id - start_machine + 1) * config.kpi_num, :] = plane_data_per_machine.T
-    # compute wasserstein_distance matrix
-    # distance_matrix = np.asarray([[wasserstein_distance_function(plane_data[i], plane_data[j])
-    #                                for i in range(machine_num * config.kpi_num)]
-    #                               for j in range(machine_num * config.kpi_num)])
-
-    # cluster_result = AgglomerativeClustering(n_clusters=config.cluster_num, affinity="precomputed",
-    #                                          linkage="average", distance_threshold=None).fit_predict(distance_matrix)
 
     hac = AgglomerativeClustering(n_clusters=3).fit(plane_data)
     cluster_result = hac.labels_
